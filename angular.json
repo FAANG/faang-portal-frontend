@@ -47,6 +47,14 @@
               "vendorChunk": false,
               "buildOptimizer": true,
               "serviceWorker": true
+            },
+            "test": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.test.ts"
+                }
+              ]
             }
           }
         },
@@ -129,24 +137,5 @@
       }
     }
   },
-  "defaultProject": "faang-portal-frontend-angular6-second",
-  "configurations": {
-    "production": {
-      "fileReplacements": [
-        {
-          "replace": "src/environments/environment.ts",
-          "with": "src/environments/environment.prod.ts"
-        }
-      ]
-
-    },
-    "test": {
-      "fileReplacements": [
-        {
-          "replace": "src/environments/environment.ts",
-          "with": "src/environments/environment.test.ts"
-        }
-      ]
-    }
-  }
+  "defaultProject": "faang-portal-frontend-angular6-second"
 }
