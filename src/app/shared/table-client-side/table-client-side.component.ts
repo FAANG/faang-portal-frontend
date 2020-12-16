@@ -1,6 +1,7 @@
 import { Component, Input, OnInit, ViewChild} from '@angular/core';
 import {MatPaginator, MatSort, MatTableDataSource} from '@angular/material';
 import {Observable} from 'rxjs';
+import {female_values, male_values} from '../constants';
 
 @Component({
   selector: 'app-table-client-side',
@@ -10,6 +11,7 @@ import {Observable} from 'rxjs';
 export class TableClientSideComponent implements OnInit {
   @Input() display_fields: Array<string>; // list of fields to be displayed in the table
   @Input() column_names: Array<string>; // list of column headers for the selected fields
+  @Input() public templates: Object; // column templates
   @Input() data: Array<any>; // Array data to be populated in the table
   @Input() filter_values: Observable<Object>; // filter values in the format { col1: [val1, val2..], col2: [val1, val2...], ... }
   
@@ -26,6 +28,7 @@ export class TableClientSideComponent implements OnInit {
     this.dataSource.paginator = this.paginator; 
     this.dataSource.sort = this.sort;
     this.dataSource.filterPredicate = this.createFilter();
+    this.dataSource.filter = JSON.stringify(this.filter_values);
   }
 
   // apply filter when component input "filter_values" is changed
@@ -49,8 +52,61 @@ export class TableClientSideComponent implements OnInit {
       }
       if (isFilterSet) {
         for (const col in searchTerms) {
-          if (searchTerms[col].indexOf(data[col]) == -1) {
-            return false;
+          // handling paperPublished - any non 'true' or missing value should be considered 'false'
+          if (col === 'paperPublished') {
+            if (searchTerms[col][0] == 'true') { // filtering records with paper published
+              if (data[col] !== 'true') {
+                return false;
+              }
+            } else {  // filtering records with paper not published
+              if (data[col] && data[col] === 'true') {
+                return false;
+              }
+            }
+          }
+          // handling RNA-Seq values, comma separated values for assayType
+          else if (col === 'assayType') {
+            let found = false;
+            data[col].split(',').forEach(assayTypeval => {
+              if (searchTerms[col][0] === 'RNA-Seq') {
+                if (assayTypeval === 'transcription profiling by high throughput sequencing' || assayTypeval === 'RNA-Seq') {
+                  found = true;
+                }
+              } 
+              else {
+                if (assayTypeval === searchTerms[col][0]) {
+                  found = true;
+                }
+              }
+            });
+            if (!found) {
+              return false;
+            }
+          }
+          // handle comma separated values for species, archive
+          else if (col === 'species' || col === 'archive') {
+            let found = false;
+            data[col].split(',').forEach(val => {
+              if (val === searchTerms[col][0]) {
+                found = true;
+              }
+            });
+            if (!found) {
+              return false;
+            }
+          }
+          // handling sex values
+          else if (col === 'sex'){
+            if (!(searchTerms[col][0] === 'male' && male_values.indexOf(data[col]) > -1) &&
+                !(searchTerms[col][0] === 'female' && female_values.indexOf(data[col]) > -1) &&
+                !(searchTerms[col][0] === 'not determined' && male_values.indexOf(data[col]) === -1 && female_values.indexOf(data[col]) === -1)) {
+              return false;
+            }
+          } 
+          else {
+            if (searchTerms[col].indexOf(data[col]) == -1) {
+              return false;
+            }
           }
         }
         return true;

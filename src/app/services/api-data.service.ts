@@ -20,10 +20,31 @@ export class ApiDataService {
 
   getAllFiles(query: any, size: number) {
     const url = this.hostSetting.host + 'file/' + '_search/' + '?size=' + size;
-    const params = new HttpParams().set('_source', query['_source'].toString()).set('sort', query['sort']);
+    let aggs = {
+      'study': 'study.accession',
+      'experiment': 'experiment.accession',
+      'species': 'species.text',
+      'assay_type': 'experiment.assayType',
+      'target': 'experiment.target',
+      'specimen': 'specimen',
+      'instrument': 'run.instrument',
+      'assayType': 'experiment.assayType',
+      'standard': 'experiment.standardMet',
+      'paper_published': 'paperPublished'
+    }
+    let filters = query['filters'];
+    for (const prop in filters) {
+      if (aggs[prop] && (prop !== aggs[prop])) {
+        filters[aggs[prop]] = filters[prop];
+        delete filters[prop];
+      }
+    }
+    const sortParams = aggs[query['sort'][0]] ? aggs[query['sort'][0]] + ':' + query['sort'][1] : query['sort'][0] + ':' + query['sort'][1]; 
+    const params = new HttpParams().set('_source', query['_source'].toString()).set('sort', sortParams).set('filters', JSON.stringify(filters)).set('aggs', JSON.stringify(aggs)).set('from_', query['from_']);
+    let res = {};
     return this.http.get(url, {params: params}).pipe(
       map((data: any) => {
-        return data.hits.hits.map(entry => ({
+        res['data'] = data.hits.hits.map(entry => ({
           fileName: entry['_id'],
           study: entry['_source']['study']['accession'],
           experiment: entry['_source']['experiment']['accession'],
@@ -36,10 +57,45 @@ export class ApiDataService {
           paperPublished: entry['_source']['paperPublished']
           } as FileTable )
         );
+        res['totalHits'] = data.hits.total;
+        res['aggregations'] = data.aggregations;
+        return res;
       }),
       retry(3),
       catchError(this.handleError),
     );
+  }
+
+  downloadFiles(query: any) {
+    const url = this.hostSetting.host + 'file/' + 'download/';
+    let filters = query['filters'];
+    let mapping = {
+      'study': 'study.accession',
+      'experiment': 'experiment.accession',
+      'species': 'species.text',
+      'assay_type': 'experiment.assayType',
+      'target': 'experiment.target',
+      'specimen': 'specimen',
+      'instrument': 'run.instrument',
+      'assayType': 'experiment.assayType',
+      'standard': 'experiment.standardMet',
+      'paper_published': 'paperPublished'
+    }
+    for (const prop in filters) {
+      if (mapping[prop] && (prop !== mapping[prop])) {
+        filters[mapping[prop]] = filters[prop];
+        delete filters[prop];
+      }
+    }
+    const sortParams = mapping[query['sort'][0]] ? mapping[query['sort'][0]] + ':' + query['sort'][1] : query['sort'][0] + ':' + query['sort'][1]; 
+    const params = new HttpParams().set('_source', query['_source'].toString()).set('sort', sortParams).set('filters', JSON.stringify(filters)).set('columns', JSON.stringify(query['columns'])).set('file_format', query['file_format']);
+    const fullURL = `${url}?${params.toString()}`;
+    return this.http.get(fullURL, {responseType: 'blob' as 'blob'}).pipe(
+      map((data: any) => {
+        return data;
+      }),
+      catchError(this.handleError),
+    );;
   }
 
   getAllFilesForProject(project: string) {
@@ -166,10 +222,28 @@ export class ApiDataService {
 
   getAllSpecimens(query: any, size: number) {
     const url = this.hostSetting.host + 'specimen/' + '_search/' + '?size=' + size;
-    const params = new HttpParams().set('_source', query['_source'].toString()).set('sort', query['sort']);
+    let aggs = {
+      'standard': 'standardMet',
+      'sex': 'organism.sex.text',
+      'organism': 'organism.organism.text',
+      'material': 'material.text',
+      'organismpart_celltype': 'cellType.text',
+      'breed': 'organism.breed.text',
+      'paper_published': 'paperPublished'
+    }
+    let filters = query['filters'];
+    for (const prop in filters) {
+      if (aggs[prop] && (prop !== aggs[prop])) {
+        filters[aggs[prop]] = filters[prop];
+        delete filters[prop];
+      }
+    }
+    const sortParams = aggs[query['sort'][0]] ? aggs[query['sort'][0]] + ':' + query['sort'][1] : query['sort'][0] + ':' + query['sort'][1]; 
+    const params = new HttpParams().set('_source', query['_source'].toString()).set('sort', sortParams).set('filters', JSON.stringify(filters)).set('aggs', JSON.stringify(aggs)).set('from_', query['from_']);
+    let res = {};
     return this.http.get(url, {params: params}).pipe(
       map((data: any) => {
-        return data.hits.hits.map( entry => ({
+        res['data'] = data.hits.hits.map( entry => ({
           bioSampleId: entry['_source']['biosampleId'],
           material: this.checkField(entry['_source']['material']),
           organismpart_celltype: this.checkField(entry['_source']['cellType']),
@@ -177,14 +251,46 @@ export class ApiDataService {
           organism: this.checkField(entry['_source']['organism']['organism']),
           breed: this.checkField(entry['_source']['organism']['breed']),
           standard: entry['_source']['standardMet'],
-          idNumber: +entry['_source']['id_number'],
-          paperPublished: entry['_source']['paperPublished'],
+          idNumber: entry['_source']['id_number'],
+          paperPublished: entry['_source']['paperPublished']
           } as SpecimenTable)
         );
+        res['totalHits'] = data.hits.total;
+        res['aggregations'] = data.aggregations;
+        return res;
       }),
       retry(3),
       catchError(this.handleError),
     );
+  }
+
+  downloadSpecimens(query: any) {
+    const url = this.hostSetting.host + 'specimen/' + 'download/';
+    let filters = query['filters'];
+    let mapping = {
+      'standard': 'standardMet',
+      'sex': 'organism.sex.text',
+      'organism': 'organism.organism.text',
+      'material': 'material.text',
+      'organismpart_celltype': 'cellType.text',
+      'breed': 'organism.breed.text',
+      'paper_published': 'paperPublished'
+    }
+    for (const prop in filters) {
+      if (mapping[prop] && (prop !== mapping[prop])) {
+        filters[mapping[prop]] = filters[prop];
+        delete filters[prop];
+      }
+    }
+    const sortParams = mapping[query['sort'][0]] ? mapping[query['sort'][0]] + ':' + query['sort'][1] : query['sort'][0] + ':' + query['sort'][1]; 
+    const params = new HttpParams().set('_source', query['_source'].toString()).set('sort', sortParams).set('filters', JSON.stringify(filters)).set('columns', JSON.stringify(query['columns'])).set('file_format', query['file_format']);
+    const fullURL = `${url}?${params.toString()}`;
+    return this.http.get(fullURL, {responseType: 'blob' as 'blob'}).pipe(
+      map((data: any) => {
+        return data;
+      }),
+      catchError(this.handleError),
+    );;
   }
 
   // Todo preserve JSON structure on backend part

@@ -1,27 +1,30 @@
-import {Component, OnDestroy, OnInit} from '@angular/core';
+import {Component, OnDestroy, OnInit, AfterViewInit, TemplateRef, ViewChild, ViewChildren, QueryList} from '@angular/core';
 import {NgxSpinnerService} from 'ngx-spinner';
 import {ApiDataService} from '../services/api-data.service';
-import {OrganismTable, SortParams} from '../shared/interfaces';
+import {OrganismTable} from '../shared/interfaces';
 import {AggregationService} from '../services/aggregation.service';
 import {Observable, Subscription} from 'rxjs';
 import {ExportService} from '../services/export.service';
 import {Title} from '@angular/platform-browser';
 import {ActivatedRoute, Params, Router} from '@angular/router';
+import {TableClientSideComponent}  from '../shared/table-client-side/table-client-side.component';
 
 @Component({
   selector: 'app-organism',
   templateUrl: './organism.component.html',
   styleUrls: ['./organism.component.css']
 })
-export class OrganismComponent implements OnInit, OnDestroy {
+export class OrganismComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('bioSampleIdTemplate', { static: true }) bioSampleIdTemplate: TemplateRef<any>;
+  @ViewChild('paperPublishedTemplate', { static: true }) paperPublishedTemplate: TemplateRef<any>;
+  @ViewChildren("tableComp") tableComponents: QueryList<TableClientSideComponent>;
+  private tableClientComponent: TableClientSideComponent;
   organismListShort: Observable<OrganismTable[]>;
   organismListLong: Observable<OrganismTable[]>;
 
   columnNames: string[] = ['BioSample ID', 'Sex', 'Organism', 'Breed', 'Standard', 'Paper published'];
-  spanClass = 'expand_more';
-  defaultClass = 'unfold_more';
-  selectedColumn = 'BioSample ID';
-  sort_field: SortParams;
+  displayFields: string[] = ['bioSampleId', 'sex', 'organism', 'breed', 'standard', 'paperPublished'];
+  templates: Object;
   filter_field: {};
   aggrSubscription: Subscription;
   exportSubscription: Subscription;
@@ -31,9 +34,6 @@ export class OrganismComponent implements OnInit, OnDestroy {
   optionsCsv;
   optionsTabular;
   data = {};
-
-  // Local variable for pagination
-  p = 1;
 
   error: string;
 
@@ -58,6 +58,8 @@ export class OrganismComponent implements OnInit, OnDestroy {
               private titleService: Title) { }
 
   ngOnInit() {
+    this.templates = {'bioSampleId': this.bioSampleIdTemplate, 
+                      'paperPublished': this.paperPublishedTemplate };
     this.titleService.setTitle('FAANG organisms');
     this.spinner.show();
     this.activatedRoute.queryParams.subscribe((params: Params) => {
@@ -77,13 +79,25 @@ export class OrganismComponent implements OnInit, OnDestroy {
         }
       }
       this.aggregationService.field.next(this.aggregationService.active_filters);
+      for (const key in filters) {
+        if (key == 'paper_published') {
+          filters['paper_published'].forEach(function(item, i) { 
+            if (item == 'Yes') 
+              filters['paper_published'][i] = 'true'; 
+            else
+              filters['paper_published'][i] = 'false'; 
+          });
+          filters['paperPublished'] = filters['paper_published'];
+          delete filters['paper_published'];
+        }
+      }
       this.filter_field = filters;
+      this.filter_field = Object.assign({}, this.filter_field);
     });
     this.optionsCsv = this.exportService.optionsCsv;
     this.optionsTabular = this.exportService.optionsTabular;
     this.optionsCsv['headers'] = this.columnNames;
-    this.optionsTabular['headers'] = this.optionsTabular;
-    this.sort_field = {id: 'idNumber', direction: 'desc'};
+    this.optionsTabular['headers'] = this.columnNames;
     this.dataService.getAllOrganisms(this.query, 25).subscribe(
       (data) => {
         this.organismListShort = data;
@@ -114,67 +128,12 @@ export class OrganismComponent implements OnInit, OnDestroy {
     });
   }
 
-  onTableClick(event: any) {
-    let event_class;
-    if (event['srcElement']['firstElementChild']) {
-      event_class = event['srcElement']['firstElementChild']['innerText'];
-    } else {
-      event_class = event['srcElement']['innerText'];
-    }
-    this.selectedColumn = event['srcElement']['id'];
-    this.selectColumn();
-    this.chooseClass(event_class);
-  }
-
-  chooseClass(event_class: string) {
-    if (this.selectedColumn === 'BioSample ID') {
-      if (event_class === 'expand_more') {
-        this.spanClass = 'expand_less';
-        this.sort_field['direction'] = 'asc';
-      } else {
-        this.spanClass = 'expand_more';
-        this.sort_field['direction'] = 'desc';
-      }
-    } else {
-      if (event_class === this.defaultClass) {
-        this.spanClass = 'expand_more';
-        this.sort_field['direction'] = 'desc';
-      } else if (event_class === 'expand_more') {
-        this.spanClass = 'expand_less';
-        this.sort_field['direction'] = 'asc';
-      } else {
-        this.spanClass = 'unfold_more';
-        this.sort_field['direction'] = 'desc';
-        this.sort_field['id'] = 'idNumber';
-        this.selectedColumn = 'BioSample ID';
-        this.spanClass = 'expand_more';
-      }
-    }
-  }
-
-  selectColumn() {
-    switch (this.selectedColumn) {
-      case 'BioSample ID': {
-        this.sort_field['id'] = 'idNumber';
-        break;
-      }
-      case 'Sex': {
-        this.sort_field['id'] = 'sex';
-        break;
-      }
-      case 'Organism': {
-        this.sort_field['id'] = 'organism';
-        break;
-      }
-      case 'Breed': {
-        this.sort_field['id'] = 'breed';
-        break;
-      }
-      case 'Standard': {
-        this.sort_field['id'] = 'standard';
-        break;
-      }
-    }
+  ngAfterViewInit() {
+      this.tableComponents.changes.subscribe((comps: QueryList <TableClientSideComponent>) => {
+          this.tableClientComponent = comps.first;
+          this.aggregationService.getAggregations(this.tableClientComponent.dataSource.filteredData, 'organism');
+          this.data = this.tableClientComponent.dataSource.sortData(this.tableClientComponent.dataSource.filteredData,this.tableClientComponent.dataSource.sort);
+      });
   }
 
   hasActiveFilters() {

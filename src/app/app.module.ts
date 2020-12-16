@@ -77,7 +77,9 @@ import 'hammerjs';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule } from '@angular/material';
 import { MatSortModule } from '@angular/material';
-import { TableClientSideComponent } from './shared/table-client-side/table-client-side.component';
+import { MatProgressSpinnerModule } from '@angular/material';
+import { TableClientSideComponent } from './shared/table-client-side/table-client-side.component'; 
+import { TableServerSideComponent } from './shared/table-server-side/table-server-side.component'; 
 import {LoginComponent} from './login/login.component';
 import {FilesUploadComponent} from './files-upload/files-upload.component';
 import {UserService} from './services/user.service';
@@ -149,6 +151,7 @@ export function removeToken(): void {
     SubprojectComponent,
     AapComponent,
     TableClientSideComponent,
+    TableServerSideComponent,
     LoginComponent,
     FilesUploadComponent
   ],
@@ -168,6 +171,7 @@ export function removeToken(): void {
     MatTableModule,
     MatPaginatorModule,
     MatSortModule,
+    MatProgressSpinnerModule,
     MatTooltipModule,
     MatButtonModule,
     MatIconModule,
