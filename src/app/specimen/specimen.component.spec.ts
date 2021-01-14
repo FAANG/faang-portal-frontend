@@ -1,5 +1,5 @@
-import { async, ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { async, ComponentFixture, TestBed, inject } from '@angular/core/testing';
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { SpecimenComponent } from './specimen.component';
 import {HeaderComponent} from '../shared/header/header.component';
 import {FilterComponent} from '../shared/filter/filter.component';
@@ -10,6 +10,14 @@ import {FilterPipe} from '../pipes/filter.pipe';
 import {SortPipe} from '../pipes/sort.pipe';
 import {RouterTestingModule} from '@angular/router/testing';
 import {HttpClientTestingModule} from '@angular/common/http/testing';
+import { TableServerSideComponent } from '../shared/table-server-side/table-server-side.component';
+import { MatTableModule } from '@angular/material/table';
+import { MatPaginator, MatSort } from '@angular/material';
+import {MatTooltipModule} from '@angular/material/tooltip';
+import {Router} from '@angular/router';
+import {ApiDataService} from '../services/api-data.service';
+import {AggregationService} from '../services/aggregation.service';
+import {of as observableOf} from 'rxjs';
 
 describe('SpecimenComponent', () => {
   let component: SpecimenComponent;
@@ -24,12 +32,22 @@ describe('SpecimenComponent', () => {
         ExportComponent,
         ActiveFilterComponent,
         FilterPipe,
-        SortPipe
+        SortPipe,
+        TableServerSideComponent,
+        MatPaginator,
+        MatSort,
       ],
       imports: [
         NgxPaginationModule,
         RouterTestingModule,
-        HttpClientTestingModule
+        HttpClientTestingModule,
+        MatTableModule,
+        MatTooltipModule,
+      ],
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
+      providers: [
+        ApiDataService,
+        AggregationService
       ]
     })
     .compileComponents();
@@ -56,6 +74,19 @@ describe('SpecimenComponent', () => {
     expect(component.hasActiveFilters()).toEqual(true);
   });
 
+  it('hasActiveFilters should return false if filter_field is undefined', () => {
+    var filter;
+    component.filter_field = filter;
+    expect(component.hasActiveFilters()).toEqual(false);
+  });
+
+  it('hasActiveFilters should return false if filter_field is not set', () => {
+    component.filter_field = {
+      standard: []
+    };
+    expect(component.hasActiveFilters()).toEqual(false);
+  });
+
   it('resetFilter should reset all filters in filter_field', () => {
     component.filter_field = {
       standard: ['FAANG']
@@ -80,57 +111,75 @@ describe('SpecimenComponent', () => {
     expect(component.isGreen('false')).toEqual('default');
   });
 
-  it('selectColumn should assign right value for sort_field', () => {
-    component.selectedColumn = 'BioSample ID';
-    component.selectColumn();
-    expect(component.sort_field['id']).toEqual('idNumber');
-
-    component.selectedColumn = 'Material';
-    component.selectColumn();
-    expect(component.sort_field['id']).toEqual('material');
-
-    component.selectedColumn = 'Organism part/Cell type';
-    component.selectColumn();
-    expect(component.sort_field['id']).toEqual('organismpart_celltype');
-
-    component.selectedColumn = 'Sex';
-    component.selectColumn();
-    expect(component.sort_field['id']).toEqual('sex');
-
-    component.selectedColumn = 'Organism';
-    component.selectColumn();
-    expect(component.sort_field['id']).toEqual('organism');
-
-    component.selectedColumn = 'Breed';
-    component.selectColumn();
-    expect(component.sort_field['id']).toEqual('breed');
-
-    component.selectedColumn = 'Standard';
-    component.selectColumn();
-    expect(component.sort_field['id']).toEqual('standard');
+  it('onDownloadData should change value of downloadData', () => {
+    expect(component.downloadData).toEqual(false);
+    component.onDownloadData();
+    expect(component.downloadData).toEqual(true);
+    component.onDownloadData();
+    expect(component.downloadData).toEqual(false);
   });
 
-  it('chooseClass should assign right values for spanClass and sort_field', () => {
-    component.selectedColumn = 'BioSample ID';
-    component.chooseClass('expand_more');
-    expect(component.spanClass).toEqual('expand_less');
-    expect(component.sort_field['direction']).toEqual('asc');
+  it('removeFilter should reset all filters and remove queryParams', inject([Router], (router: Router) => {
+    spyOn(router, 'navigate').and.stub();
+    component.filter_field = {
+      standard: ['FAANG']
+    };
+    component.removeFilter();
+    expect(component.filter_field).toEqual({});
+    expect(router.navigate).toHaveBeenCalledWith(['specimen'], Object({queryParams: Object({ })}));
+  }));
 
-    component.chooseClass('expand_less');
-    expect(component.spanClass).toEqual('expand_more');
-    expect(component.sort_field['direction']).toEqual('desc');
+  it('downloadCsvFile should download file in csv format', inject([ApiDataService], (dataService: ApiDataService) => {
+    var blob = new Blob(['sample data'], {type:'text/csv'});
+    spyOn(dataService, 'downloadSpecimens').and.returnValue(observableOf(blob));
+    const spyObj = jasmine.createSpyObj('a', ['click']);
+    spyOn(document, 'createElement').and.returnValue(spyObj);
 
-    component.selectedColumn = 'Material';
-    component.chooseClass('unfold_more');
-    expect(component.spanClass).toEqual('expand_more');
-    expect(component.sort_field['direction']).toEqual('desc');
+    component.downloadCsvFile();
 
-    component.chooseClass('expand_more');
-    expect(component.spanClass).toEqual('expand_less');
-    expect(component.sort_field['direction']).toEqual('asc');
+    expect(component.downloadQuery.file_format).toEqual('csv');
+    expect(dataService.downloadSpecimens).toHaveBeenCalledWith(component.downloadQuery);
+    dataService.downloadSpecimens(component.downloadQuery).subscribe(() => {
+      expect(document.createElement).toHaveBeenCalledWith('a');
+      expect(spyObj.download).toBe('faang_data.csv');
+      expect(spyObj.click).toHaveBeenCalled();
+    })
+  }));
 
-    component.chooseClass('expand_less');
-    expect(component.spanClass).toEqual('expand_more');
-    expect(component.sort_field['direction']).toEqual('desc');
+  it('downloadTabularFile should download file in txt format', inject([ApiDataService], (dataService: ApiDataService) => {
+    var blob = new Blob(['sample data'], {type:'text/plain'});
+    spyOn(dataService, 'downloadSpecimens').and.returnValue(observableOf(blob));
+    const spyObj = jasmine.createSpyObj('a', ['click']);
+    spyOn(document, 'createElement').and.returnValue(spyObj);
+
+    component.downloadTabularFile();
+
+    expect(component.downloadQuery.file_format).toEqual('txt');
+    expect(dataService.downloadSpecimens).toHaveBeenCalledWith(component.downloadQuery);
+    dataService.downloadSpecimens(component.downloadQuery).subscribe(() => {
+      expect(document.createElement).toHaveBeenCalledWith('a');
+      expect(spyObj.download).toBe('faang_data.txt');
+      expect(spyObj.click).toHaveBeenCalled();
+    })
+  }));
+
+  it('should navigate to right url when aggregation fields are updated', 
+  inject([AggregationService, Router], (service: AggregationService, router: Router) => {
+    spyOn(router, 'navigate').and.stub();
+    var params = {};
+    service.field.next(params);
+    service.field.subscribe(() => {
+      expect(router.navigate).toHaveBeenCalledWith(['specimen'], Object({queryParams: Object(params)}));
+    })
+    params = {standard: ['FAANG']}
+    service.field.next(params);
+    service.field.subscribe(() => {
+      expect(router.navigate).toHaveBeenCalledWith(['specimen'], Object({queryParams: Object(params)}));
+    })
+  }));
+
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
   });
 });

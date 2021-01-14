@@ -1,5 +1,5 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { AnalysisDetailComponent } from './analysis-detail.component';
 import {HeaderComponent} from '../../shared/header/header.component';
 import {RobustLinkComponent} from '../../shared/robust-link/robust-link.component';
@@ -7,6 +7,9 @@ import {NgxPaginationModule} from 'ngx-pagination';
 import {RouterTestingModule} from '@angular/router/testing';
 import {HttpClientTestingModule} from '@angular/common/http/testing';
 import {RelatedItemsComponent} from '../../shared/related-items/related-items.component';
+import {Router} from '@angular/router';
+import { ApiDataService } from '../../services/api-data.service';
+import {of as observableOf} from 'rxjs';
 
 describe('AnalysisDetailComponent', () => {
   let component: AnalysisDetailComponent;
@@ -24,7 +27,8 @@ describe('AnalysisDetailComponent', () => {
         NgxPaginationModule,
         RouterTestingModule,
         HttpClientTestingModule
-      ]
+      ],
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
     })
     .compileComponents();
   }));
@@ -40,19 +44,43 @@ describe('AnalysisDetailComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('wrong analysis accession', () => {
-    component.accession = 'fake accession';
-    const spyOnInit = spyOn(component, 'ngOnInit');
+  it('should set analysis data', () => {
+    const service = TestBed.get(ApiDataService);
+    const response = {
+      hits: {
+        hits: [
+          {
+            _source: {id: 'testId1'}
+          }
+        ]
+      }
+    }
+    spyOn(service, 'getAnalysis').and.returnValue(observableOf(response));
     component.ngOnInit();
-    expect(spyOnInit.calls.count()).toEqual(1);
-    expect(component.analysis).toBeUndefined();
+    expect(service.getAnalysis).toHaveBeenCalled();
+    expect(component.analysis).toEqual({id: 'testId1'});
   });
 
-  it('correct analysis accession', () => {
-    const spyOnInit = spyOn(component, 'ngOnInit');
+  it('should navigate to 404 when analysis not found', () => {
+    const service = TestBed.get(ApiDataService);
+    const router = TestBed.get(Router);
+    const response = {
+      hits: {
+        hits: []
+      }
+    }
+    spyOn(service, 'getAnalysis').and.returnValue(observableOf(response));
+    spyOn(router, 'navigate').and.stub();
     component.ngOnInit();
-    expect(spyOnInit.calls.count()).toEqual(1);
-    expect(component.analysis).toBeUndefined();
-    // expect(component.analysis['accession']).toEqual(component.accession);
+    expect(service.getAnalysis).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['404']);
+  });
+
+  it('should return false', () => {
+    expect(component.sampleInES('testId')).toEqual(false);
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
   });
 });

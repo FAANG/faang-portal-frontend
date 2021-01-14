@@ -1,5 +1,5 @@
-import { async, ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { async, ComponentFixture, TestBed, inject } from '@angular/core/testing';
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { OrganismComponent } from './organism.component';
 import {HeaderComponent} from '../shared/header/header.component';
 import {ActiveFilterComponent} from '../shared/active-filter/active-filter.component';
@@ -10,6 +10,10 @@ import {FilterPipe} from '../pipes/filter.pipe';
 import {SortPipe} from '../pipes/sort.pipe';
 import {RouterTestingModule} from '@angular/router/testing';
 import {HttpClientTestingModule} from '@angular/common/http/testing';
+import {Router, ActivatedRoute} from '@angular/router';
+import { ApiDataService } from '../services/api-data.service';
+import { AggregationService } from '../services/aggregation.service';
+import {of as observableOf} from 'rxjs';
 
 describe('OrganismComponent', () => {
   let component: OrganismComponent;
@@ -30,7 +34,8 @@ describe('OrganismComponent', () => {
         NgxPaginationModule,
         RouterTestingModule,
         HttpClientTestingModule
-      ]
+      ],
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
     })
     .compileComponents();
   }));
@@ -54,6 +59,19 @@ describe('OrganismComponent', () => {
       standard: ['FAANG']
     };
     expect(component.hasActiveFilters()).toEqual(true);
+  });
+
+  it('hasActiveFilters should return false if filter_field is undefined', () => {
+    var filter;
+    component.filter_field = filter;
+    expect(component.hasActiveFilters()).toEqual(false);
+  });
+
+  it('hasActiveFilters should return false if filter_field is not set', () => {
+    component.filter_field = {
+      standard: []
+    };
+    expect(component.hasActiveFilters()).toEqual(false);
   });
 
   it('resetFilter should reset all filters in filter_field', () => {
@@ -80,49 +98,54 @@ describe('OrganismComponent', () => {
     expect(component.isGreen('false')).toEqual('default');
   });
 
-  it('selectColumn should assign right value for sort_field', () => {
-    component.selectedColumn = 'BioSample ID';
-    component.selectColumn();
-    expect(component.sort_field['id']).toEqual('idNumber');
-
-    component.selectedColumn = 'Sex';
-    component.selectColumn();
-    expect(component.sort_field['id']).toEqual('sex');
-
-    component.selectedColumn = 'Organism';
-    component.selectColumn();
-    expect(component.sort_field['id']).toEqual('organism');
-
-    component.selectedColumn = 'Breed';
-    component.selectColumn();
-    expect(component.sort_field['id']).toEqual('breed');
-
-    component.selectedColumn = 'Standard';
-    component.selectColumn();
-    expect(component.sort_field['id']).toEqual('standard');
+  it('onDownloadData should change value of downloadData', () => {
+    expect(component.downloadData).toEqual(false);
+    component.onDownloadData();
+    expect(component.downloadData).toEqual(true);
+    component.onDownloadData();
+    expect(component.downloadData).toEqual(false);
   });
 
-  it('chooseClass should assign right values for spanClass and sort_field', () => {
-    component.selectedColumn = 'BioSample ID';
-    component.chooseClass('expand_more');
-    expect(component.spanClass).toEqual('expand_less');
-    expect(component.sort_field['direction']).toEqual('asc');
+  it('removeFilter should reset all filters and remove queryParams', inject([Router], (router: Router) => {
+    spyOn(router, 'navigate').and.stub();
+    component.filter_field = {
+      standard: ['FAANG']
+    };
+    component.removeFilter();
+    expect(component.filter_field).toEqual({});
+    expect(router.navigate).toHaveBeenCalledWith(['organism'], Object({queryParams: Object({ })}));
+  }));
 
-    component.chooseClass('expand_less');
-    expect(component.spanClass).toEqual('expand_more');
-    expect(component.sort_field['direction']).toEqual('desc');
+  it('get table data and aggregations when component loads', () => {
+    const service = TestBed.get(ApiDataService);
+    const aggService = TestBed.get(AggregationService);
+    spyOn(service, 'getAllOrganisms').and.returnValue(observableOf([{id: 'testId1'}, {id: 'testId2'}]));
+    spyOn(aggService, 'getAggregations');
+    component.ngOnInit();
+    expect(service.getAllOrganisms).toHaveBeenCalled();
+    expect(aggService.getAggregations).toHaveBeenCalledWith([{id: 'testId1'}, {id: 'testId2'}], 'organism');
+  });
 
-    component.selectedColumn = 'Organism';
-    component.chooseClass('unfold_more');
-    expect(component.spanClass).toEqual('expand_more');
-    expect(component.sort_field['direction']).toEqual('desc');
+  it('get aggregations and set filters from url params', () => {
+    const activatedRoute = TestBed.get(ActivatedRoute);
+    const aggService = TestBed.get(AggregationService);
+    let params = {
+      standard: 'FAANG', 
+      organism: ['Sus scrofa', 'Gallus gallus'],
+      paper_published: 'Yes'
+    }
+    activatedRoute.queryParams.next(params);
+    let active_filters = {};
+    for (var key in aggService.active_filters) {
+      if (aggService.active_filters[key].length > 0) {
+        active_filters[key] = aggService.active_filters[key];
+      }
+    }
+    expect(active_filters).toEqual({standard: ['FAANG'], organism: ['Sus scrofa', 'Gallus gallus'], paper_published: ['Yes']});
+    expect(component.filter_field).toEqual({standard: ['FAANG'], organism: ['Sus scrofa', 'Gallus gallus'], paperPublished: ['true']});
+  });
 
-    component.chooseClass('expand_more');
-    expect(component.spanClass).toEqual('expand_less');
-    expect(component.sort_field['direction']).toEqual('asc');
-
-    component.chooseClass('expand_less');
-    expect(component.spanClass).toEqual('expand_more');
-    expect(component.sort_field['direction']).toEqual('desc');
+  afterEach(() => {
+    TestBed.resetTestingModule();
   });
 });
