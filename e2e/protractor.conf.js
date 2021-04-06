@@ -4,13 +4,17 @@
 const { SpecReporter } = require('jasmine-spec-reporter');
 
 exports.config = {
-  allScriptsTimeout: 11000,
+  allScriptsTimeout: 60000,
   specs: [
     './src/**/*.e2e-spec.ts'
   ],
   capabilities: {
     chromeOptions: {
-      args: ["--headless"]
+      args: [
+        "--no-sandbox",
+        "--headless",
+        "--disable-dev-shm-usage",
+      ]
     },
     'browserName': 'chrome'
   },
@@ -19,7 +23,7 @@ exports.config = {
   framework: 'jasmine',
   jasmineNodeOpts: {
     showColors: true,
-    defaultTimeoutInterval: 30000,
+    defaultTimeoutInterval: 60000,
     print: function() {}
   },
   onPrepare() {

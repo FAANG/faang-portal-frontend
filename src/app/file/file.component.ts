@@ -27,7 +27,7 @@ export class FileComponent implements OnInit, OnDestroy {
   downloadData = false;
   data = {};
 
-  private query = {
+  query = {
     'sort': ['name','desc'],
     '_source': [
       'study.accession',

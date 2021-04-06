@@ -1,0 +1,47 @@
+image: node:10
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+
+stages:
+  - install
+  - test
+  - build
+
+install_dependencies:
+  stage: install
+  script:
+    - npm install
+    - npm install -g @angular/cli
+  only:
+    - aksh/ci-cd
+
+test_stage:
+  stage: test
+  only:
+    - aksh/ci-cd
+  before_script:
+    - set -xe
+    - wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+    - echo "deb http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list
+    - apt-get update -yqqq
+    - apt-get install -y google-chrome-stable
+  script:
+    - npm run e2e
+    - npm run test
+  artifacts:
+    paths:
+      - coverage/*
+  coverage: '/(\d*.?\d+)%/'
+
+build_stage:
+  stage: build
+  only:
+    - aksh/ci-cd
+  script:
+    - npm run build  
+  artifacts:
+    paths:
+      - dist/

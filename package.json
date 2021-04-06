@@ -4,10 +4,10 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
-    "test": "ng test",
+    "build": "./node_modules/@angular/cli/bin/ng build --prod --base-href",
+    "test": "./node_modules/@angular/cli/bin/ng test --watch=false --browsers=ChromeHeadlessNoSandbox && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage",
     "lint": "ng lint",
-    "e2e": "ng e2e"
+    "e2e": "./node_modules/@angular/cli/bin/ng e2e"
   },
   "private": true,
   "dependencies": {
@@ -67,7 +67,7 @@
     "karma-jasmine": "~1.1.1",
     "karma-jasmine-html-reporter": "^0.2.2",
     "lite-server": "^2.5.4",
-    "protractor": "^5.4.2",
+    "protractor": "^7.0.0",
     "ts-node": "~5.0.1",
     "tslint": "~5.9.1",
     "typescript": "~3.5.3"

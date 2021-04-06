@@ -1,5 +1,5 @@
 import { AppPage } from './app.po';
-import {by, element, browser} from 'protractor';
+import {by, element, browser, ExpectedConditions} from 'protractor';
 
 describe('Test home page', () => {
   let page: AppPage;
@@ -31,21 +31,23 @@ describe('Test organisms page', () => {
   it('should sort table', () => {
     expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(2).getText()).toEqual('Equus caballus');
     element.all(by.css('th')).get(2).click().then(function() {
-      expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(2).getText()).toEqual('Sus scrofa');
-    });
-    element.all(by.css('th')).get(2).click().then(function() {
       expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(2).getText()).toEqual('Bos indicus');
     });
     element.all(by.css('th')).get(2).click().then(function() {
-      expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(2).getText()).toEqual('Equus caballus');
+      expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(2).getText()).toEqual('Sus scrofa');
     });
   });
 
   it('should filter table', () => {
-    const before = element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText();
-    element.all(by.css('.list-group-item')).get(1).click().then(function() {
-      const after = element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText();
-      expect(before).toBeGreaterThan(after);
+     browser.sleep(5000);
+     element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText().then(res => {
+      const before = res;
+      element.all(by.css('.list-group-item')).get(1).click().then(function() {
+        element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText().then(res2 => {
+          const after = res2;
+          expect(parseInt(before)).toBeGreaterThan(parseInt(after));
+        });
+      });
     });
   });
 });
@@ -85,9 +87,6 @@ describe('Test specimens page', () => {
   it('should sort table', () => {
     expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(1).getText()).toEqual('specimen from organism');
     element.all(by.css('th')).get(1).click().then(function() {
-      expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(1).getText()).toEqual('specimen from organism');
-    });
-    element.all(by.css('th')).get(1).click().then(function() {
       expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(1).getText()).toEqual('cell culture');
     });
     element.all(by.css('th')).get(1).click().then(function() {
@@ -96,11 +95,15 @@ describe('Test specimens page', () => {
   });
 
   it('should filter table', () => {
-    const before = element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText();
-    element.all(by.css('.list-group-item')).get(1).click().then(function() {
-      const after = element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText();
-      // TODO check this
-      expect(before).toBeLessThan(after);
+    browser.wait(ExpectedConditions.presenceOf(element(by.css('.list-group-item'))), 5000);
+    element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText().then(res => {
+      const before = res;
+      element.all(by.css('.list-group-item')).get(1).click().then(function() {
+        element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText().then(res2 => {
+          const after = res2;
+          expect(parseInt(before)).toBeGreaterThan(parseInt(after));
+        });
+      });
     });
   });
 });
@@ -137,27 +140,25 @@ describe('Test dataset page', () => {
   });
 
   it('should sort table', () => {
-    expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(2).getText()).toEqual('Ovis aries');
-    element.all(by.css('th')).get(2).click().then(function() {
-      expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(2).getText()).toEqual('Sus scrofa,Gallus gallus');
-    });
+    expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(2).getText()).toEqual('Gallus gallus');
     element.all(by.css('th')).get(2).click().then(function() {
       expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(2).getText()).toEqual('Bos indicus');
     });
     element.all(by.css('th')).get(2).click().then(function() {
-      expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(2).getText()).toEqual('Ovis aries');
+      expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(2).getText()).toEqual('Sus scrofa,Gallus gallus,Equus caballus,Ovis aries,Capra hircus,Bos taurus');
     });
   });
 
   it('should filter table', () => {
     browser.sleep(5000);
-    const before = element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText();
-    browser.sleep(5000);
-    element.all(by.css('.list-group-item')).get(2).click().then(function() {
-      browser.sleep(5000);
-      const after = element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText();
-      // TODO check this
-      expect(before).toBeLessThan(after);
+    element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText().then(res => {
+      const before = res;
+      element.all(by.css('.list-group-item')).get(2).click().then(function() {
+        element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText().then(res2 => {
+          const after = res2;
+          expect(parseInt(before)).toBeGreaterThan(parseInt(after));
+        });
+      });
     });
   });
 });
@@ -197,21 +198,23 @@ describe('Test file page', () => {
   it('should sort table', () => {
     expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(3).getText()).toEqual('Bos taurus');
     element.all(by.css('th')).get(3).click().then(function() {
-      expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(3).getText()).toEqual('Sus scrofa');
-    });
-    element.all(by.css('th')).get(3).click().then(function() {
       expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(3).getText()).toEqual('Bos indicus');
     });
     element.all(by.css('th')).get(3).click().then(function() {
-      expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(3).getText()).toEqual('Bos taurus');
+      expect(element(by.css('tbody')).all(by.css('tr')).first().all(by.css('td')).get(3).getText()).toEqual('Sus scrofa');
     });
   });
 
   it('should filter table', () => {
-    const before = element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText();
-    element.all(by.css('.list-group-item')).get(2).click().then(function() {
-      const after = element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText();
-      expect(before).toBeGreaterThan(after);
+    browser.wait(ExpectedConditions.presenceOf(element(by.css('.list-group-item'))), 5000);
+    element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText().then(res => {
+      const before = res;
+      element.all(by.css('.list-group-item')).get(2).click().then(function() {
+        element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText().then(res2 => {
+          const after = res2;
+          expect(parseInt(before)).toBeGreaterThan(parseInt(after));
+        });
+      });
     });
   });
 });
@@ -248,10 +251,16 @@ describe('Test protocol/samples page', () => {
   });
 
   it('should filter table', () => {
-    element.all(by.css('.list-group-item')).get(3).click().then(function() {
-      const after = element.all(by.css('.list-group-item')).get(3).getText();
-      expect(after).toContain('samples');
-    });
+    browser.wait(ExpectedConditions.presenceOf(element(by.css('.list-group-item'))), 5000);
+    element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText().then(res => {
+     const before = res;
+     element.all(by.css('.list-group-item')).get(1).click().then(function() {
+       element.all(by.css('.list-group-item')).first().all(by.css('span')).first().getText().then(res2 => {
+         const after = res2;
+         expect(parseInt(before)).toBeGreaterThan(parseInt(after));
+       });
+     });
+   });
   });
 });
 
@@ -287,9 +296,10 @@ describe('Test protocol/experiments page', () => {
   });
 
   it('should filter table', () => {
+    browser.wait(ExpectedConditions.presenceOf(element(by.css('.list-group-item'))), 5000);
     element.all(by.css('.list-group-item')).get(0).click().then(function() {
       const after = element.all(by.css('.list-group-item')).get(1).getText();
-      expect(after).toContain('CHEBI_33697');
+      expect(after).toContain('CHEBI 33697');
     });
   });
 });
@@ -410,19 +420,19 @@ describe('Test search page', () => {
   });
 
   it('should have checkbox that will exclude legacy data', () => {
-    expect(element(by.css('.checkbox')).element(by.tagName('label')).getText()).toEqual('Show only FAANG data (exclude legacy data)');
+    expect(element(by.css('.form-check-label')).getText()).toEqual('Show only FAANG data (exclude legacy data)');
   });
 
-  it('should display 485 matching datasets on a search path when search for sus scrofa', () => {
+  it('should display matching datasets on a search path when search for sus scrofa', () => {
     element(by.css('.form-control')).sendKeys('sus scrofa').then(function () {
-      expect(element.all(by.css('h4')).last().getText()).toEqual('485 matching datasets');
+      expect(element.all(by.css('h6')).last().getText()).toContain('matching datasets');
     });
   });
 
-  it('should display 11 matching datasets on a search path when search for sus scrofa with legacy data excluded', () => {
+  it('should display matching datasets on a search path when search for sus scrofa with legacy data excluded', () => {
     element(by.css('.form-control')).sendKeys('sus scrofa').then(function () {
-      element(by.css('.checkbox')).element(by.tagName('label')).element(by.tagName('input')).click().then(function() {
-        expect(element.all(by.css('h4')).last().getText()).toEqual('11 matching datasets');
+      element(by.css('.form-check-input')).click().then(function() {
+        expect(element.all(by.css('h6')).last().getText()).toContain('dataset');
       });
     });
   });
@@ -436,18 +446,8 @@ describe('Test help page', () => {
     page.navigateToHelp();
   });
 
-  it('should display "Frequently Asked Questions" on help path', () => {
-    expect(page.getParagraphTextForPages()).toEqual('Frequently Asked Questions:');
-  });
-
-  it('should display "How do I get involved with the FAANG project?" on help path', () => {
-    expect(element.all(by.css('h4')).first().getText()).toEqual('How do I get involved with the FAANG project?');
-  });
-
-  it('should display some text when click on arrow on help path', () => {
-    element.all(by.css('summary')).first().click().then(function() {
-      expect(element.all(by.css('details')).first().getText()).toContain('Please register');
-    });
+  it('should display "Please find documentation here" on help path', () => {
+    expect(element(by.css('h5')).getText()).toEqual('Please find documentation here');
   });
 });
 

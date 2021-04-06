@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Inject, NgZone } from '@angular/core';
 import {SearchService} from '../services/search.service';
 import {Title} from '@angular/platform-browser';
 
@@ -26,16 +26,20 @@ export class SearchComponent implements OnInit {
     }
   }
 
-  constructor(private searchService: SearchService, private titleService: Title) { }
+  constructor(private searchService: SearchService, private titleService: Title, @Inject(NgZone) private ngZone: NgZone) { }
 
   onCheckboxClick() {
     this.clicked = !this.clicked;
     this.searchService.clicked.next(this.clicked);
     if (typeof this.searchText !== 'undefined') {
       this.searchService.searchText$.next('');
-      setTimeout(() => {
-        this.searchService.searchText$.next(this.searchText);
-      }, 500);
+      this.ngZone.runOutsideAngular(() => {
+        setTimeout(() => {
+          this.ngZone.run(() => {
+            this.searchService.searchText$.next(this.searchText);
+          });
+        }, 500);
+      });
     }
   }
 
